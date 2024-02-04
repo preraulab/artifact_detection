@@ -46,7 +46,7 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %       %Suggested new values
 %       artifacts_new = detect_artifacts_dev(data,Fs,'zscore_method','robust','hf_crit', 5.5,'bb_crit', 5.5,'slope_test',true, 'verbose',true);
 %
-%   Copyright 2023 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
+%   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
 %   See also: multitaper_spectrogram_mex, get_chunks, consecutive_runs
 %% ********************************************************************
