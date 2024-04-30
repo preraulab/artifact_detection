@@ -12,7 +12,7 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %       Fs: double - sampling frequency in Hz -- required
 %
 %   Optional Input Arguments:
-%       'isexcluded': logical vector - indicates excluded data points (default: [])
+%       'isexcluded': logical vector - indicates excluded data points that will be set as artifact (default: [])
 %       'zscore_method': char - method for z-score calculation ('standard':mean and std or 'robust': median and MAD) (default: 'standard')
 %       'hf_crit': numeric - high-frequency artifact detection criterion (default: 4.5)
 %       'hf_pass': numeric - high-frequency artifact passband frequency in Hz (default: 35)
@@ -40,11 +40,10 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %       Fs = 1000; % Sampling Frequency
 %       data = randn(10000, 1); % Example EEG data
 %
-%       %Default values equate to the original version
-%       artifacts_orig = detect_artifacts_dev(data, Fs,);
+%       artifact = detect_artifacts_dev(data,Fs);
 %
-%       %Suggested new values
-%       artifacts_new = detect_artifacts_dev(data,Fs,'zscore_method','robust','hf_crit', 5.5,'bb_crit', 5.5,'slope_test',true, 'verbose',true);
+%       %Old version
+%       artifacts_old = detect_artifacts_dev(data, Fs, 'zscore_method','standard','hf_crit', 4.5,'bb_crit', 4.5,'slope_test',false);
 %
 %   Copyright 2024 Michael J. Prerau Laboratory. - http://www.sleepEEG.org
 %
@@ -65,16 +64,16 @@ end
 p = inputParser;
 
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
-addOptional(p, 'zscore_method', 'standard',  @(x) validateattributes(x, {'char'},{}));
+addOptional(p, 'zscore_method', 'robust',  @(x) validateattributes(x, {'char'},{}));
 
-addOptional(p, 'hf_crit', 4.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
+addOptional(p, 'hf_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
 addOptional(p, 'hf_pass', 35, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'bb_crit', 4.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
+addOptional(p, 'bb_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
 addOptional(p, 'bb_pass', .1, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
 addOptional(p, 'hf_detrend', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'bb_detrend', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 
-addOptional(p, 'slope_test', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'slope_test', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
 addOptional(p, 'slope_crit', -0.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
 
 addOptional(p, 'smooth_duration', 2, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
@@ -164,24 +163,31 @@ else
 end
 
 %Get bad indices
-[~, ~, ~, is_flat] = get_chunks(data, 100);
-bad_inds = isnan(data) | isinf(data) | is_flat | bad_slope;
+[~, ~, ~, is_flat] = get_chunks(data, Fs);
+bad_inds = isnan(data) | isinf(data) | is_flat | bad_slope | isexcluded;
 bad_inds = find_outlier_noise(data, bad_inds);
 
 %Interpolate big gaps in data
 t = 1:length(data);
-data_fixed = interp1([0, t(~bad_inds), length(data)+1], [0; data(~bad_inds); 0], t)';
+good_data = data(~bad_inds);
+data_fixed = interp1([0, t(~bad_inds), length(data)+1], [good_data(1); good_data; good_data(end)], t)';
+
+%Trim the data to make it more consistent with cutting vs excluding
+valid_range_inds = find(~bad_inds,1,'first'):find(~bad_inds,1,'last');
+data_fixed = data_fixed(valid_range_inds);
+bad_inds = bad_inds(valid_range_inds);
 
 %% Get high frequency artifacts
 hf_artifacts = compute_artifacts(hpFilt_high, detrend_duration, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
-    'high frequency', histogram_plot, isexcluded, zscore_method, hf_detrend, diagnostic_plot);
+    'high frequency', histogram_plot, zscore_method, hf_detrend, diagnostic_plot);
 
 %% Get broad band frequency artifacts
 bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
-    'broadband frequency', histogram_plot, isexcluded, zscore_method, bb_detrend, diagnostic_plot);
+    'broadband frequency', histogram_plot, zscore_method, bb_detrend, diagnostic_plot);
 
-%% Join artifacts from different frequency bands
-artifacts = hf_artifacts | bb_artifacts;
+%% Join artifacts from different frequency bands and put back to original size
+artifacts = true(size(data));
+artifacts(valid_range_inds) = hf_artifacts | bb_artifacts | bad_inds;
 
 %% Add buffer on both sides of detected artifacts
 if buffer_duration > 0
@@ -215,7 +221,7 @@ bad_inds(inds) = true;
 
 
 function detected_artifacts = compute_artifacts(filter_coeff, detrend_duration, crit, data_fixed,...
-    smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, isexcluded, zscore_method, detrend_on, diagnostic_plot)
+    smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, zscore_method, detrend_on, diagnostic_plot)
 %% Get artifacts for a particular frequency band
 
 if diagnostic_plot
@@ -284,7 +290,7 @@ end
 detected_artifacts = bad_inds;
 
 %Take z-score
-ysig = y_signal(~detected_artifacts & ~isexcluded);
+ysig = y_signal(~detected_artifacts);
 if strcmpi(zscore_method,'standard')
     ymid = mean(ysig);
     ystd = std(ysig);
@@ -318,10 +324,10 @@ count = 1;
 while any(over_crit)
 
     %Update the detected artifact time points
-    detected_artifacts(over_crit) = true;
+    detected_artifacts(over_crit & ~bad_inds) = true;
 
     %Compute modified z-score
-    ysig = y_signal(~detected_artifacts & ~isexcluded);
+    ysig = y_signal(~detected_artifacts);
     if strcmpi(zscore_method,'standard')
         ymid = mean(ysig);
         ystd = std(ysig);
