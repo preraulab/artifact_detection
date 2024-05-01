@@ -3,9 +3,6 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %
 %   Usage:
 %       artifacts = detect_artifacts(data, Fs, varargin)
-%   
-%   NOTE: Default arguments will be the same as the original
-%   detect_artifacts()
 %
 %   Input:
 %       data: <number of samples> x 1 vector - time series data -- required
@@ -13,6 +10,8 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %
 %   Optional Input Arguments:
 %       'isexcluded': logical vector - indicates excluded data points that will be set as artifact (default: [])
+%       'exclude_mode': string - 'data' or 'artifact', determines if isexcluded time are treated as data 
+%                       that are not factored in for the theshold detection or artifacts (default: 'data')
 %       'zscore_method': char - method for z-score calculation ('standard':mean and std or 'robust': median and MAD) (default: 'standard')
 %       'hf_crit': numeric - high-frequency artifact detection criterion (default: 4.5)
 %       'hf_pass': numeric - high-frequency artifact passband frequency in Hz (default: 35)
@@ -64,6 +63,7 @@ end
 p = inputParser;
 
 addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
+addOptional(p, 'exclude_mode', 'data', @(x)(isempty(x)||ismember(x,{'artifact','data'})));
 addOptional(p, 'zscore_method', 'robust',  @(x) validateattributes(x, {'char'},{}));
 
 addOptional(p, 'hf_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
@@ -164,7 +164,7 @@ end
 
 %Get bad indices
 [~, ~, ~, is_flat] = get_chunks(data, Fs);
-bad_inds = isnan(data) | isinf(data) | is_flat | bad_slope | isexcluded;
+bad_inds = isnan(data) | isinf(data) | is_flat | bad_slope;
 bad_inds = find_outlier_noise(data, bad_inds);
 
 %Interpolate big gaps in data
@@ -172,22 +172,22 @@ t = 1:length(data);
 good_data = data(~bad_inds);
 data_fixed = interp1([0, t(~bad_inds), length(data)+1], [good_data(1); good_data; good_data(end)], t)';
 
-%Trim the data to make it more consistent with cutting vs excluding
-valid_range_inds = find(~bad_inds,1,'first'):find(~bad_inds,1,'last');
-data_fixed = data_fixed(valid_range_inds);
-bad_inds = bad_inds(valid_range_inds);
-
 %% Get high frequency artifacts
-hf_artifacts = compute_artifacts(hpFilt_high, detrend_duration, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
+hf_artifacts = compute_artifacts(hpFilt_high, detrend_duration, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, isexcluded, verbose,...
     'high frequency', histogram_plot, zscore_method, hf_detrend, diagnostic_plot);
 
 %% Get broad band frequency artifacts
-bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, verbose,...
+bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, isexcluded, verbose,...
     'broadband frequency', histogram_plot, zscore_method, bb_detrend, diagnostic_plot);
 
 %% Join artifacts from different frequency bands and put back to original size
-artifacts = true(size(data));
-artifacts(valid_range_inds) = hf_artifacts | bb_artifacts | bad_inds;
+% artifacts = true(size(data));
+artifacts = hf_artifacts | bb_artifacts | bad_inds;
+
+%Block out artifacts if requested for exclusion
+if strcmpi(exclude_mode,'artifact')
+    artifacts = artifacts | isexcluded;
+end
 
 %% Add buffer on both sides of detected artifacts
 if buffer_duration > 0
@@ -221,7 +221,7 @@ bad_inds(inds) = true;
 
 
 function detected_artifacts = compute_artifacts(filter_coeff, detrend_duration, crit, data_fixed,...
-    smooth_duration, Fs, bad_inds, verbose, verbosestring, histogram_plot, zscore_method, detrend_on, diagnostic_plot)
+    smooth_duration, Fs, bad_inds, isexcluded, verbose, verbosestring, histogram_plot, zscore_method, detrend_on, diagnostic_plot)
 %% Get artifacts for a particular frequency band
 
 if diagnostic_plot
@@ -235,8 +235,8 @@ if diagnostic_plot
     t = (0:length(data_fixed)-1)/Fs;
 end
 
-%Perform a high pass filter
-y_signal = filter(filter_coeff, data_fixed);
+%Perform a zero-phase filter
+y_signal = filtfilt(filter_coeff, data_fixed);
 
 if diagnostic_plot
     axes(ax(1))
@@ -276,8 +276,6 @@ if detrend_on
     %Moving median is the most efficient way to detrend and does not leave
     %a transient
     y_signal = y_signal - movmedian(y_signal, Fs*detrend_duration);
-    % y_detrend = spline_detrend(y_log, Fs, [], 60);
-    % y_detrend = filter(detrend_filt, y_log);
 
     if diagnostic_plot
         axes(ax(5))
@@ -290,7 +288,7 @@ end
 detected_artifacts = bad_inds;
 
 %Take z-score
-ysig = y_signal(~detected_artifacts);
+ysig = y_signal(~detected_artifacts & ~isexcluded);
 if strcmpi(zscore_method,'standard')
     ymid = mean(ysig);
     ystd = std(ysig);
@@ -315,9 +313,8 @@ if histogram_plot
     ah = gca;
 end
 
-
 %Keep removing until all values under criterion
-over_crit = abs(y_signal)>crit & ~detected_artifacts;
+over_crit = abs(y_signal)>crit & ~detected_artifacts & ~isexcluded;
 
 %Loop until nothing over criterion
 count = 1;
@@ -327,7 +324,7 @@ while any(over_crit)
     detected_artifacts(over_crit & ~bad_inds) = true;
 
     %Compute modified z-score
-    ysig = y_signal(~detected_artifacts);
+    ysig = y_signal(~detected_artifacts & ~isexcluded);
     if strcmpi(zscore_method,'standard')
         ymid = mean(ysig);
         ystd = std(ysig);
@@ -339,11 +336,11 @@ while any(over_crit)
     y_signal = (y_signal - ymid)/ystd;
 
     %Find new criterion
-    over_crit = abs(y_signal)>crit & ~detected_artifacts;
+    over_crit = abs(y_signal)>crit & ~detected_artifacts & ~isexcluded;
 
     if histogram_plot
         axes(ah); %#ok<LAXES>
-        histogram(y_signal(~detected_artifacts), 100);
+        histogram(y_signal(~detected_artifacts & ~isexcluded), 100);
         title(['          Outliers Removed: iteration ', num2str(count)]);
         drawnow;
         pause(0.1);
