@@ -10,7 +10,7 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %
 %   Optional Input Arguments:
 %       'isexcluded': logical vector - indicates excluded data points that will be set as artifact (default: [])
-%       'exclude_mode': string - 'data' or 'artifact', determines if isexcluded time are treated as data 
+%       'exclude_mode': string - 'data' or 'artifact', determines if isexcluded time are treated as data
 %                       that are not factored in for the theshold detection or artifacts (default: 'data')
 %       'zscore_method': char - method for z-score calculation ('standard':mean and std or 'robust': median and MAD) (default: 'standard')
 %       'hf_crit': numeric - high-frequency artifact detection criterion (default: 4.5)
