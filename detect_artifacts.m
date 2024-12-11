@@ -62,28 +62,28 @@ end
 
 p = inputParser;
 
-addOptional(p, 'isexcluded', [], @(x) validateattributes(x, {'logical', 'vector'},{}));
-addOptional(p, 'exclude_mode', 'data', @(x)(isempty(x)||ismember(x,{'artifact','data'})));
-addOptional(p, 'zscore_method', 'robust',  @(x) validateattributes(x, {'char'},{}));
+addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
+addOptional(p, 'exclude_mode', 'data', @(x) any(validatestring(x, {'artifact', 'data'})));
+addOptional(p, 'zscore_method', 'robust', @(x) any(validatestring(x, {'robust', 'standard'})));
 
-addOptional(p, 'hf_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'hf_pass', 35, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'bb_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'bb_pass', .1, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'hf_detrend', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'bb_detrend', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'hf_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'hf_pass', 35, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'bb_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'bb_pass', .1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'hf_detrend', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'bb_detrend', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
-addOptional(p, 'slope_test', true, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'slope_crit', -0.5, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
+addOptional(p, 'slope_test', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'slope_crit', -0.5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
-addOptional(p, 'smooth_duration', 2, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'detrend_duration', 5*60, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
-addOptional(p, 'buffer_duration', 0, @(x) validateattributes(x,{'numeric'},{'real', 'finite', 'nonnan'}));
+addOptional(p, 'smooth_duration', 2, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'detrend_duration', 5*60, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
+addOptional(p, 'buffer_duration', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
-addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'diagnostic_plot', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'histogram_plot', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
-addOptional(p, 'return_filts_only', false, @(x) validateattributes(x,{'logical'},{'real','nonempty', 'nonnan'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'diagnostic_plot', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'histogram_plot', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'return_filts_only', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 addOptional(p, 'hpFilt_high', []);
 addOptional(p, 'hpFilt_broad', []);
@@ -93,8 +93,6 @@ parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
-
-validatestring(zscore_method,{'robust','standard'});
 
 % Verify that the isexcluded boolean is valid
 if isempty(isexcluded)
