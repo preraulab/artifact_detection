@@ -7,7 +7,7 @@ function [artifacts] = detect_artifacts_hjorth(data, Fs, window_length_sec)
 %                                            verbose, histogram_plot, return_filts_only, hpFilt_high, hpFilt_broad, detrend_filt)
 %
 %   Input:
-%   data: 1 x <number of samples> vector - time series data-- required
+%   data: <number of samples> vector x 1 - time series data -- required
 %   Fs: double - sampling frequency in Hz  -- required
 %   crit_units: string 'std' to use iterative crit_units (default) or a strict threshold on 'MAD',defined as K*MEDIAN(ABS(A-MEDIAN(A)))
 %   hf_crit: double - high frequency criterion - number of stds/MAD above the mean to remove (default: 3.5)
@@ -35,13 +35,8 @@ function [artifacts] = detect_artifacts_hjorth(data, Fs, window_length_sec)
 
 %% Input parsing
 %Force column vector for uniformity
-if ~iscolumn(data)
+if isrow(data)
     data=data(:);
-end
-
-%Force to double
-if ~isa(data,'double')
-    data = double(data);
 end
 
 if nargin<2

@@ -9,7 +9,7 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %       Fs: double - sampling frequency in Hz -- required
 %
 %   Optional Input Arguments:
-%       'isexcluded': logical vector - indicates excluded data points that will be set as artifact (default: [])
+%       'isexcluded': logical vector - indicates excluded data points that will be set as artifact (default: logical([]))
 %       'exclude_mode': string - 'data' or 'artifact', determines if isexcluded time are treated as data
 %                       that are not factored in for the theshold detection or artifacts (default: 'data')
 %       'zscore_method': char - method for z-score calculation ('standard':mean and std or 'robust': median and MAD) (default: 'standard')
@@ -50,16 +50,6 @@ function artifacts = detect_artifacts(data, Fs, varargin)
 %% ********************************************************************
 
 %% Input parsing
-%Force column vector for uniformity
-if ~iscolumn(data)
-    data=data(:);
-end
-
-%Force to double
-if ~isa(data, 'double')
-    data = double(data);
-end
-
 p = inputParser;
 
 addOptional(p, 'isexcluded', logical([]), @(x) validateattributes(x,{'logical'},{'real','finite','2d'}));
@@ -92,13 +82,19 @@ parse(p,varargin{:});
 parser_results = struct2cell(p.Results); %#ok<NASGU>
 field_names = fieldnames(p.Results);
 
+%Automatically add parser results to the workspace
 eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+
+%Force column vector for uniformity
+if isrow(data)
+    data = data(:);
+end
 
 % Verify that the isexcluded boolean is valid
 if isempty(isexcluded)
     isexcluded = false(size(data));
 else
-    if ~iscolumn(isexcluded)
+    if isrow(isexcluded)
         isexcluded=isexcluded(:);
     end
     assert(length(isexcluded) == length(data),'isexcluded must be the same length as data');
@@ -146,7 +142,6 @@ if verbose
 end
 
 %% Get bad indicies
-
 if slope_test
     [spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, [1 min(55,Fs/2)],[10,19],[10 5],[],[],[],false,false);
     B = zeros(length(stimes),2);
@@ -200,13 +195,20 @@ end
 %% Sanity check before outputting
 assert(length(artifacts) == length(data), 'Data vector length is inconsistent. Please check.')
 
+%Force artifacts to be a row vector
+if iscolumn(artifacts)
+    artifacts = transpose(artifacts);
+end
+
 if verbose
     disp(['Total time: ' num2str(toc(t_start)) ' seconds']);
     disp(' ');
 end
+end
 
-%Find all time points that have outlier high or low noise
+
 function bad_inds = find_outlier_noise(data, bad_inds)
+%% %Find all time points that have outlier high or low noise
 data_mean = mean(data(~bad_inds));
 data_std = std(data(~bad_inds));
 
@@ -216,12 +218,12 @@ high_thresh = data_mean + outlier_scalar * data_std;
 
 inds = data <= low_thresh | data >= high_thresh;
 bad_inds(inds) = true;
+end
 
 
 function detected_artifacts = compute_artifacts(filter_coeff, detrend_duration, crit, data_fixed,...
     smooth_duration, Fs, bad_inds, isexcluded, verbose, verbosestring, histogram_plot, zscore_method, detrend_on, diagnostic_plot)
 %% Get artifacts for a particular frequency band
-
 if diagnostic_plot
     figure
     if detrend_on
@@ -352,4 +354,5 @@ end
 
 if histogram_plot
     close(fh);
+end
 end
