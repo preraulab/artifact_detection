@@ -27,8 +27,6 @@ function [artifacts] = detect_artifacts_hjorth(data, Fs, window_length_sec)
 %   artifacts: 1xT logical of times flagged as artifacts (logical OR of hf and bb artifacts)
 %
 %   Copyright 2024 Michael J. Prerau, Ph.D. - http://www.sleepEEG.org
-%   This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-%   (http://creativecommons.org/licenses/by-nc-sa/4.0/)
 %
 %   Last modified 01/22/2021 by Mike & Tom, Alex
 %% ********************************************************************
