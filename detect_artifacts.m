@@ -60,20 +60,20 @@ addOptional(p, 'hf_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real','fi
 addOptional(p, 'hf_pass', 35, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bb_crit', 5.5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'bb_pass', .1, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
-addOptional(p, 'hf_detrend', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'bb_detrend', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'hf_detrend', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'bb_detrend', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
-addOptional(p, 'slope_test', true, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'slope_test', true, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 addOptional(p, 'slope_crit', -0.5, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
 addOptional(p, 'smooth_duration', 2, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'detrend_duration', 5*60, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 addOptional(p, 'buffer_duration', 0, @(x) validateattributes(x,{'numeric'},{'real','finite','scalar'}));
 
-addOptional(p, 'verbose', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'diagnostic_plot', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'histogram_plot', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
-addOptional(p, 'return_filts_only', false, @(x) validateattributes(x,{'logical'},{'scalar'}));
+addOptional(p, 'verbose', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'diagnostic_plot', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'histogram_plot', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
+addOptional(p, 'return_filts_only', false, @(x) validateattributes(x, {'logical', 'numeric'}, {'binary'}));
 
 addOptional(p, 'hpFilt_high', []);
 addOptional(p, 'hpFilt_broad', []);
