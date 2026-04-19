@@ -30,6 +30,9 @@ autodoc_default_options = {
     "undoc-members": True,
 }
 
+add_module_names = False
+matlab_short_links = True
+
 myst_enable_extensions = [
     "colon_fence",
     "deflist",

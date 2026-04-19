@@ -1,12 +1,7 @@
 API Reference
 =============
 
-Auto-generated reference for ``artifact_detection``.
+.. toctree::
+   :maxdepth: 1
 
-Root
-----
-
-.. mat:module:: .
-
-.. mat:autofunction:: detect_artifacts
-
+   api/detect_artifacts
