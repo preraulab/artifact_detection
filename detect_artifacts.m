@@ -79,11 +79,8 @@ addOptional(p, 'hpFilt_high', []);
 addOptional(p, 'hpFilt_broad', []);
 
 parse(p,varargin{:});
-parser_results = struct2cell(p.Results); %#ok<NASGU>
-field_names = fieldnames(p.Results);
 
-%Automatically add parser results to the workspace
-eval(['[', sprintf('%s ', field_names{:}), '] = deal(parser_results{:});']);
+opts = p.Results;
 
 %Force column vector for uniformity
 if isrow(data)
@@ -91,50 +88,50 @@ if isrow(data)
 end
 
 % Verify that the isexcluded boolean is valid
-if isempty(isexcluded)
-    isexcluded = false(size(data));
+if isempty(opts.isexcluded)
+    opts.isexcluded = false(size(data));
 else
-    if isrow(isexcluded)
-        isexcluded=isexcluded(:);
+    if isrow(opts.isexcluded)
+        opts.isexcluded=opts.isexcluded(:);
     end
-    assert(length(isexcluded) == length(data),'isexcluded must be the same length as data');
+    assert(length(opts.isexcluded) == length(data),'isexcluded must be the same length as data');
 end
 
 % Create filters if none are provided
-if isempty(hpFilt_high) %#ok<*NODEF>
-    hpFilt_high = designfilt('highpassiir','FilterOrder',4, ...
-        'PassbandFrequency',hf_pass,'PassbandRipple',0.2, ...
+if isempty(opts.hpFilt_high) %#ok<*NODEF>
+    opts.hpFilt_high = designfilt('highpassiir','FilterOrder',4, ...
+        'PassbandFrequency',opts.hf_pass,'PassbandRipple',0.2, ...
         'SampleRate',Fs);
 end
 
-if isempty(hpFilt_broad)
-    hpFilt_broad = designfilt('highpassiir','FilterOrder',4, ...
-        'PassbandFrequency',bb_pass,'PassbandRipple',0.2, ...
+if isempty(opts.hpFilt_broad)
+    opts.hpFilt_broad = designfilt('highpassiir','FilterOrder',4, ...
+        'PassbandFrequency',opts.bb_pass,'PassbandRipple',0.2, ...
         'SampleRate',Fs);
 end
 
 % If desired, return filter parameters only
-if return_filts_only
-    artifacts = [hpFilt_high, hpFilt_broad];
+if opts.return_filts_only
+    artifacts = [opts.hpFilt_high, opts.hpFilt_broad];
     return
 end
 
-if verbose
+if opts.verbose
     t_start = tic;
     disp('Performing artifact detection:')
-    disp(['     Z-score method: ' zscore_method])
+    disp(['     Z-score method: ' opts.zscore_method])
     disp(' ')
-    disp(['     High Frequency Criterion: ' num2str(hf_crit)]);
-    disp(['     High Frequency Passband: ' num2str(hf_pass) ' Hz']);
-    disp(['     High Frequency Detrend: '  char(string(hf_detrend))]);
+    disp(['     High Frequency Criterion: ' num2str(opts.hf_crit)]);
+    disp(['     High Frequency Passband: ' num2str(opts.hf_pass) ' Hz']);
+    disp(['     High Frequency Detrend: '  char(string(opts.hf_detrend))]);
     disp(' ')
-    disp(['     Broadband Criterion: ' num2str(bb_crit) ]);
-    disp(['     Broadband Passband: ' num2str(bb_pass) ' Hz']);
-    disp(['     Broadband Detrend: '  char(string(hf_detrend))]);
+    disp(['     Broadband Criterion: ' num2str(opts.bb_crit) ]);
+    disp(['     Broadband Passband: ' num2str(opts.bb_pass) ' Hz']);
+    disp(['     Broadband Detrend: '  char(string(opts.hf_detrend))]);
     disp(' ')
 
-    if slope_test
-        disp(['     Slope Test: slope > ' num2str(slope_crit)]);
+    if opts.slope_test
+        disp(['     Slope Test: slope > ' num2str(opts.slope_crit)]);
     else
         disp('     Slope Test: False');
     end
@@ -142,14 +139,14 @@ if verbose
 end
 
 %% Get bad indicies
-if slope_test
+if opts.slope_test
     [spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, [1 min(55,Fs/2)],[10,19],[10 5],[],[],[],false,false);
     B = zeros(length(stimes),2);
     for ii = 1:length(stimes)
         B(ii,:) = polyfit(log(sfreqs)',log(spect(:,ii)),1);
     end
     t = (0:length(data)-1)/Fs;
-    bad_slope = interp1(stimes,double(B(:,1)>slope_crit)',t,'nearest')';
+    bad_slope = interp1(stimes,double(B(:,1)>opts.slope_crit)',t,'nearest')';
     bad_slope(isnan(bad_slope)) = 1;
 else
     bad_slope = zeros(size(data));
@@ -166,28 +163,28 @@ good_data = data(~bad_inds);
 data_fixed = interp1([0, t(~bad_inds), length(data)+1], [good_data(1); good_data; good_data(end)], t)';
 
 %% Get high frequency artifacts
-hf_artifacts = compute_artifacts(hpFilt_high, detrend_duration, hf_crit, data_fixed, smooth_duration, Fs, bad_inds, isexcluded, verbose,...
-    'high frequency', histogram_plot, zscore_method, hf_detrend, diagnostic_plot);
+hf_artifacts = compute_artifacts(opts.hpFilt_high, opts.detrend_duration, opts.hf_crit, data_fixed, opts.smooth_duration, Fs, bad_inds, opts.isexcluded, opts.verbose,...
+    'high frequency', opts.histogram_plot, opts.zscore_method, opts.hf_detrend, opts.diagnostic_plot);
 
 %% Get broad band frequency artifacts
-bb_artifacts = compute_artifacts(hpFilt_broad, detrend_duration, bb_crit, data_fixed, smooth_duration, Fs, bad_inds, isexcluded, verbose,...
-    'broadband frequency', histogram_plot, zscore_method, bb_detrend, diagnostic_plot);
+bb_artifacts = compute_artifacts(opts.hpFilt_broad, opts.detrend_duration, opts.bb_crit, data_fixed, opts.smooth_duration, Fs, bad_inds, opts.isexcluded, opts.verbose,...
+    'broadband frequency', opts.histogram_plot, opts.zscore_method, opts.bb_detrend, opts.diagnostic_plot);
 
 %% Join artifacts from different frequency bands and put back to original size
 % artifacts = true(size(data));
 artifacts = hf_artifacts | bb_artifacts | bad_inds;
 
 %Block out artifacts if requested for exclusion
-if strcmpi(exclude_mode,'artifact')
-    artifacts = artifacts | isexcluded;
+if strcmpi(opts.exclude_mode,'artifact')
+    artifacts = artifacts | opts.isexcluded;
 end
 
 %% Add buffer on both sides of detected artifacts
-if buffer_duration > 0
+if opts.buffer_duration > 0
     [cons, inds] = consecutive_runs(artifacts);
     for ii = 1:length(cons)
-        buffer_start_idx = ceil(max(1, inds{ii}(1)-buffer_duration*Fs));
-        buffer_end_idx = ceil(min(length(artifacts), inds{ii}(end)+buffer_duration*Fs));
+        buffer_start_idx = ceil(max(1, inds{ii}(1)-opts.buffer_duration*Fs));
+        buffer_end_idx = ceil(min(length(artifacts), inds{ii}(end)+opts.buffer_duration*Fs));
         artifacts(buffer_start_idx:buffer_end_idx) = true;
     end
 end
@@ -200,7 +197,7 @@ if iscolumn(artifacts)
     artifacts = transpose(artifacts);
 end
 
-if verbose
+if opts.verbose
     disp(['Total time: ' num2str(toc(t_start)) ' seconds']);
     disp(' ');
 end
