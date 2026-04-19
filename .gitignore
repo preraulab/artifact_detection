@@ -1,2 +1,6 @@
 
 *.asv
+
+# Sphinx build output
+docs/_build/
+docs/_autosummary/
