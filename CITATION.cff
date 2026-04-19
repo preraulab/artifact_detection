@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "artifact_detection"
+abstract: "Iterative z-score artifact detection for continuous time-series data, primarily sleep EEG."
+authors:
+  - family-names: Prerau
+    given-names: Michael J.
+    name-suffix: Ph.D.
+    affiliation: "Prerau Laboratory, Brigham and Women's Hospital, Harvard Medical School"
+    orcid: "https://orcid.org/0000-0002-9010-5273"
+  - family-names: He
+    given-names: Mingjian
+    affiliation: "Prerau Laboratory, Brigham and Women's Hospital, Harvard Medical School"
+    orcid: "https://orcid.org/0000-0002-6688-8693"
+type: software
+license: BSD-3-Clause
+url: "https://github.com/preraulab/artifact_detection"
+repository-code: "https://github.com/preraulab/artifact_detection"
