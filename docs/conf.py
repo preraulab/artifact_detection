@@ -46,6 +46,7 @@ source_suffix = {
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_css_files = ["prerau.css"]
 html_title = f"{project}"
 
 # Intersphinx -- no peers when built standalone.
