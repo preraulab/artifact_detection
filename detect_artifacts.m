@@ -140,7 +140,15 @@ end
 
 %% Get bad indicies
 if opts.slope_test
-    [spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, [1 min(55,Fs/2)],[10,19],[10 5],[],[],[],false,false);
+    % Route via multitaper_spectrogram_dynamo when on path: backend='rust'
+    % uses the f64 rust MTS, otherwise falls through to the Coder MEX.
+    % The slope-test config below is the heaviest MTS call in the pipeline
+    % ([10,19] tapers × [10 5]s window) so the rust path matters here.
+    if exist('multitaper_spectrogram_dynamo', 'file') == 2
+        [spect, stimes, sfreqs] = multitaper_spectrogram_dynamo(data, Fs, [1 min(55,Fs/2)],[10,19],[10 5],[],[],[],false,false);
+    else
+        [spect, stimes, sfreqs] = multitaper_spectrogram_mex(data, Fs, [1 min(55,Fs/2)],[10,19],[10 5],[],[],[],false,false);
+    end
     B = zeros(length(stimes),2);
     for ii = 1:length(stimes)
         B(ii,:) = polyfit(log(sfreqs)',log(spect(:,ii)),1);
