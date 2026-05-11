@@ -1,0 +1,38 @@
+[package]
+name = "artifact_detection_rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Rust port of detect_artifacts.m (Prerau Lab artifact_detection toolbox)."
+
+[lib]
+name = "artifact_detection_rs"
+path = "src/lib.rs"
+
+[features]
+default = []
+# Enables the slope-test branch (multitaper spectrogram + log-log polyfit).
+# Requires `multitaper_rs` from preraulab/multitaper_toolbox.
+slope_test = ["dep:multitaper_rs", "dep:ndarray"]
+
+[dependencies]
+realfft = "3"
+rustfft = "6"
+thiserror = "2"
+# ndarray is a public dep of multitaper_rs when slope_test is enabled.
+ndarray = { version = "0.16", optional = true }
+multitaper_rs = { path = "../../multitaper_toolbox/rust", optional = true }
+
+[dev-dependencies]
+ndarray = "0.16"
+ndarray-npy = "0.9"
+
+# Optimize tests too — the band-detection iter-zscore loops are heavy
+# under -Copt-level=0.
+[profile.test]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

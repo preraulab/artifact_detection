@@ -1,0 +1,19 @@
+{
+  "variant": "flat",
+  "seed": 42,
+  "fs": 100,
+  "n_samples": 30000,
+  "motion_times_s": [],
+  "motion_amps_uV": [],
+  "motion_halfwidth_s": 1,
+  "flat_intervals_1based": [
+    [
+      6000,
+      6150
+    ],
+    [
+      22500,
+      22650
+    ]
+  ]
+}
