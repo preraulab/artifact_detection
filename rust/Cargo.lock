@@ -344,6 +344,7 @@ dependencies = [
 [[package]]
 name = "multitaper_rs"
 version = "0.1.0"
+source = "git+https://github.com/preraulab/multitaper_toolbox.git?branch=add-rust-dpss-and-tests#3768964d2b133ce25d881d2efcced06b2cc29174"
 dependencies = [
  "clap",
  "ndarray",

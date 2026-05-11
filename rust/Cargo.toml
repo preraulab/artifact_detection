@@ -21,7 +21,10 @@ rustfft = "6"
 thiserror = "2"
 # ndarray is a public dep of multitaper_rs when slope_test is enabled.
 ndarray = { version = "0.16", optional = true }
-multitaper_rs = { path = "../../multitaper_toolbox/rust", optional = true }
+# Pointed at the feature branch that adds the native DPSS solver to
+# preraulab/multitaper_toolbox. Switch to master once that PR is merged,
+# or to a crates.io version once multitaper_rs is published.
+multitaper_rs = { git = "https://github.com/preraulab/multitaper_toolbox.git", branch = "add-rust-dpss-and-tests", optional = true }
 
 [dev-dependencies]
 ndarray = "0.16"
