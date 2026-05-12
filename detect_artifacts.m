@@ -155,6 +155,10 @@ if opts.slope_test
     end
     t = (0:length(data)-1)/Fs;
     bad_slope = interp1(stimes,double(B(:,1)>opts.slope_crit)',t,'nearest')';
+    % NOTE: out-of-range samples (head/tail of the recording, where no slope
+    % window center lands) are flagged as artifact regardless of slope
+    % verdict. For default window=10s/step=5s this flags the first AND last
+    % 5 s of every recording. Cross-language ports MUST preserve this.
     bad_slope(isnan(bad_slope)) = 1;
 else
     bad_slope = zeros(size(data));
@@ -299,6 +303,9 @@ if strcmpi(zscore_method,'standard')
     ystd = std(ysig);
 else
     ymid = median(ysig);
+    % NOTE: MATLAB's `mad(ysig)` with no second arg is MEAN-absolute-
+    % deviation from the MEAN, not the median. Cross-language ports must
+    % use the same: mean(abs(ysig - mean(ysig))), NOT median(abs(ysig - median(ysig))).
     ystd = mad(ysig);
 end
 
@@ -335,6 +342,7 @@ while any(over_crit)
         ystd = std(ysig);
     else
         ymid = median(ysig);
+        % NOTE: see above — `mad(ysig)` is mean-abs-dev from the MEAN.
         ystd = mad(ysig);
     end
 
